@@ -38,8 +38,10 @@
 #define CCONST const
 #endif
 
+
+/* We'd rather have a unsigned char, but compilers might complain. */
 #ifndef CCHAR
-#define CCHAR CIMUNSIGN char
+#define CCHAR char
 #endif
 
 #ifndef CINT64
