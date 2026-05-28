@@ -59,8 +59,19 @@ typedef enum cynCOSA_platform { /* platform = windowing platform/system */
     /* More CYNCOSA_PLATFORM_* flags */
 } cynCOSA_platform;
 
+/* */
+#define CYNCOSA_CYNST_DEBUG (1U << 0U)
+/* Ensure there is padding between elements */
+#define CYNCOSA_CYNST_PADDING (1U << 1U)
+/* Use error checking/context */
+#define CYNCOSA_CYNST_ERCONTX (1U << 2U)
+/* Does not allocate any resources for windows */
+#define CYNCOSA_CYNST_BACKGROUND (1U << 3U)
+
+
+
 typedef enum cynCOSA_winattr {
-    CYNCOSA_WINATTR_TITLE,      /* Set only */
+    CYNCOSA_WINATTR_TITLE,          /* Set only */
     CYNCOSA_WINATTR_POS, 
     CYNCOSA_WINATTR_POS_X,
     CYNCOSA_WINATTR_POS_Y,
@@ -74,8 +85,8 @@ typedef enum cynCOSA_winattr {
     CYNCOSA_WINATTR_MINHEIGHT,
     CYNCOSA_WINATTR_MAXHEIGHT,
     CYNCOSA_WINATTR_PIXELFORMAT,
-    CYNCOSA_WINATTR_FOCUS,      /* Get only */
-    CYNCOSA_KEYATLAS,           /* Get only */
+    CYNCOSA_WINATTR_FOCUS,          /* Get only */
+    CYNCOSA_WINATTR_KEYATLAS_SIZE,  /* Get only */
 } cynCOSA_winattr;
 
 typedef enum cynCOSA_stdkeys {
@@ -146,8 +157,37 @@ typedef enum cynCOSA_stdkeys {
     CYNCOSA_KEY_RSHIFT,
 } cynCOSA_stdkeys;
 
+typedef enum cynCOSA_funckeys {
+    CYNCOSA_KEY_FUNC1,
+    CYNCOSA_KEY_FUNC2,
+    CYNCOSA_KEY_FUNC3,
+    CYNCOSA_KEY_FUNC4,
+    CYNCOSA_KEY_FUNC5,
+    CYNCOSA_KEY_FUNC6,
+    CYNCOSA_KEY_FUNC7,
+    CYNCOSA_KEY_FUNC8,
+    CYNCOSA_KEY_FUNC9,
+    CYNCOSA_KEY_FUNC10,
+    CYNCOSA_KEY_FUNC11,
+    CYNCOSA_KEY_FUNC12,
+    CYNCOSA_KEY_FUNC13,
+    CYNCOSA_KEY_FUNC14,
+    CYNCOSA_KEY_FUNC15,
+    CYNCOSA_KEY_FUNC16,
+    CYNCOSA_KEY_FUNC17,
+    CYNCOSA_KEY_FUNC18,
+    CYNCOSA_KEY_FUNC19,
+    CYNCOSA_KEY_FUNC20,
+    CYNCOSA_KEY_FUNC21,
+    CYNCOSA_KEY_FUNC22
+} cynCOSA_funckeys;
 
-#define cynCOSA_key(keycode) (CUINT64)(1U << (CUINT64)(keycode))
+/*
+    cynCOSA provides keypages, which are 64 bit unsigned ints where each bit represents whether a key is down or not.
+    
+    The keys (for example stdkey and funckey), are indexes. Adding more keypages is always possible, though it may complicate stuff.
+*/
+#define cynCOSA_key(keycode) (CUINT64)((CUINT64)1U << (keycode))
 
 typedef enum cynCOSA_pxlfmt {
     cynCOSA_pxlfmt8_rgb,        /* 332 */
@@ -280,7 +320,7 @@ CYNDEF CYNCALL CVOID cynCOSA_InstanceLog(CCONST cynstr,...);
     * Allocates resources within the global instance and adds itself into it's winlist
     * On failure, cynCOSAWindow will be zero/NULL and adds error to the global context's result
 */
-CYNDEF CYNCALL cynCOSAWindow cynCOSA_WindowCreate(cynCOSAWinInfo* winfo, cynCOSA_sflags winsflags);
+CYNDEF CYNCALL cynCOSAWindow cynCOSA_WindowCreate(cynCOSAWinInfo* winfo, cynCOSA_sflags winflags);
 /* Updates a window to fetch events */
 /* 
     Attribute window must be valid window pointer within the global instance
@@ -308,7 +348,8 @@ CYNDEF CYNCALL CVOID cynCOSA_WindowDestroyAll();
 
 /* Retruns if the window closed/destroyed */
 /* 
-    Attribute window must be a window that has/had been created, regardless if it has been destroyed/closed
+    Has the window received a close command?
+    [internally checks if window is part of window list of cynstance]
 */
 CYNDEF CYNCALL CBOOL cynCOSA_WindowGetClosed(cynCOSAWindow window);
 /* Sets the window to a specific WinInfo */
@@ -332,12 +373,30 @@ CYNDEF CYNCALL CVOID cynCOSA_WindowSetAttr(cynCOSAWindow window, cynCOSA_winattr
 /* 
     Attribute window shall be valid within the global context
     Attribute winattr should be a valid get attribute (see docs if a winattr is not supported for get)
+    Attribute winattr_dest MUST point to memory with enough size for the attribute
     Behaviour:
-    * Allocates memory for the specific winattr type, which should be freed by the caller,
-    * * UNLESS KEEP_HANDLE flag has been used on creation!
-    * Only has access to specific parts, so check whether attributes are get-able (eg. title is not supported for get)
+    * Places/copies the data attribute data within the destination pointer
 */
-CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttr(cynCOSAWindow window, cynCOSA_winattr winattr);
+CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttr(cynCOSAWindow window, cynCOSA_winattr winattr, CVOID*winattr_dest);
+/* Returns a CVOID* to the specific winattr and keeps track of space */
+/* 
+    Attribute window shall be valid within the global context
+    Attribute winattr should be a valid get attribute (see docs if a winattr is not supported for get)
+    Attribute winattr_dest must point to the start of memory with enough size for the attribute
+    Attribute winattr_destend must point to the last address allocated for the given attribute
+    Behaviour:
+    * Checks if enough space is present, if not: CYNCOSA_RESULT_PARTIAL.
+    * Places/copies the data attribute data within the destination pointer
+*/
+CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttrSafe(cynCOSAWindow window, cynCOSA_winattr winattr, CVOID*winattr_dest, CVOID*winattr_destend);
+/* Retrieves the first keypage of the keyatlas */
+/*
+    Attribute window has to be valid within curent context
+    Behaviour:
+    * Returns a pointer to first keypage of the keyatlas
+    * This keyatlas is managed by the window, thus should not be freed!
+*/
+CYNDEF CYNCALL cynCOSA_keypage*cynCOSA_WindowGetKeyAtlas(cynCOSAWindow window);
 /* Shows a window */
 /* 
     Attribute window should be a valid window within the global context
@@ -356,13 +415,13 @@ CYNDEF CYNCALL CVOID cynCOSA_instance_create(cynstance* instance_p, cynCOSA_plat
 CYNDEF CYNCALL CVOID cynCOSA_instance_createspecific(cynstance* instance_p, cynCOSA_platform platform, cynCOSA_flags flags);
 CYNDEF CYNCALL CVOID cynCOSA_instance_destroy(cynstance* instance_p);
 
-CYNDEF CYNCALL cynCOSAWindow cynCOSA_window_create(cynstance* instance_p, cynCOSAWinInfo* winfo, cynCOSA_sflags winsflags);
+CYNDEF CYNCALL cynCOSAWindow cynCOSA_window_create(cynstance* instance_p, cynCOSAWinInfo* winfo, cynCOSA_sflags winflags);
 CYNDEF CYNCALL CVOID cynCOSA_window_update(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_updateall(cynstance* instance_p);
 CYNDEF CYNCALL CVOID cynCOSA_window_destroy(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_destroyall(cynstance* instance_p);
 
-CYNDEF CYNCALL CVOID cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
+CYNDEF CYNCALL CBOOL cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_setinfo(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinInfo*);
 CYNDEF CYNCALL CVOID cynCOSA_window_setattr(cynstance* instance_p, cynCOSAWindow window, cynCOSA_winattr winattr, CVOID* winattr_p);
 
