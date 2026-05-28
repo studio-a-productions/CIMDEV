@@ -103,6 +103,8 @@ CIM's *eValues* are more or less `extern constant values`, values which can be d
 
 ### CBOOL
 
+CIM naturally defines this as an extern constant, and thus in theory you can point to `CTRUE` or `CFALSE` instead of a variable. This allows for pointer compares instead of value compares.
+
 | value name | namespace name | standard value |
 | ---------: | :------------- | :------------: |
 | `CTRUE` | CIM_STD_BOOL_TRUE | 1U |
