@@ -1,10 +1,25 @@
 #ifndef CIM_H
 #define CIM_H
 
-#if defined(__cplusplus) && !defined(CIMEXTR)
+#if defined(__cplusplus)
+#ifndef CIMEXTR
 #define CIMEXTR extern "C"
-#elif !defined(CIMEXTR)
+#endif
+
+#ifndef CCONSTEXPR
+#define CCONSTEXPR constexpr
+#endif
+
+#else
+#ifndef CIMEXTR
 #define CIMEXTR extern
+#endif
+
+/* Because we do our parts for the cause! */
+#ifndef CCONSTEXPR
+#define CCONSTEXPR const
+#endif
+
 #endif
 
 /*

@@ -59,8 +59,19 @@ typedef enum cynCOSA_platform { /* platform = windowing platform/system */
     /* More CYNCOSA_PLATFORM_* flags */
 } cynCOSA_platform;
 
+/* */
+#define CYNCOSA_CYNST_DEBUG (1U << 0U)
+/* Ensure there is padding between elements */
+#define CYNCOSA_CYNST_PADDING (1U << 1U)
+/* Use error checking/context */
+#define CYNCOSA_CYNST_ERCONTX (1U << 2U)
+/* Does not allocate any resources for windows */
+#define CYNCOSA_CYNST_BACKGROUND (1U << 3U)
+
+
+
 typedef enum cynCOSA_winattr {
-    CYNCOSA_WINATTR_TITLE,      /* Set only */
+    CYNCOSA_WINATTR_TITLE,          /* Set only */
     CYNCOSA_WINATTR_POS, 
     CYNCOSA_WINATTR_POS_X,
     CYNCOSA_WINATTR_POS_Y,
@@ -74,8 +85,8 @@ typedef enum cynCOSA_winattr {
     CYNCOSA_WINATTR_MINHEIGHT,
     CYNCOSA_WINATTR_MAXHEIGHT,
     CYNCOSA_WINATTR_PIXELFORMAT,
-    CYNCOSA_WINATTR_FOCUS,      /* Get only */
-    CYNCOSA_KEYATLAS,           /* Get only */
+    CYNCOSA_WINATTR_FOCUS,          /* Get only */
+    CYNCOSA_WINATTR_KEYATLAS_SIZE,  /* Get only */
 } cynCOSA_winattr;
 
 typedef enum cynCOSA_stdkeys {
@@ -146,8 +157,37 @@ typedef enum cynCOSA_stdkeys {
     CYNCOSA_KEY_RSHIFT,
 } cynCOSA_stdkeys;
 
+typedef enum cynCOSA_funckeys {
+    CYNCOSA_KEY_FUNC1,
+    CYNCOSA_KEY_FUNC2,
+    CYNCOSA_KEY_FUNC3,
+    CYNCOSA_KEY_FUNC4,
+    CYNCOSA_KEY_FUNC5,
+    CYNCOSA_KEY_FUNC6,
+    CYNCOSA_KEY_FUNC7,
+    CYNCOSA_KEY_FUNC8,
+    CYNCOSA_KEY_FUNC9,
+    CYNCOSA_KEY_FUNC10,
+    CYNCOSA_KEY_FUNC11,
+    CYNCOSA_KEY_FUNC12,
+    CYNCOSA_KEY_FUNC13,
+    CYNCOSA_KEY_FUNC14,
+    CYNCOSA_KEY_FUNC15,
+    CYNCOSA_KEY_FUNC16,
+    CYNCOSA_KEY_FUNC17,
+    CYNCOSA_KEY_FUNC18,
+    CYNCOSA_KEY_FUNC19,
+    CYNCOSA_KEY_FUNC20,
+    CYNCOSA_KEY_FUNC21,
+    CYNCOSA_KEY_FUNC22
+} cynCOSA_funckeys;
 
-#define cynCOSA_key(keycode) (CUINT64)(1U << (CUINT64)(keycode))
+/*
+    cynCOSA provides keypages, which are 64 bit unsigned ints where each bit represents whether a key is down or not.
+    
+    The keys (for example stdkey and funckey), are indexes. Adding more keypages is always possible, though it may complicate stuff.
+*/
+#define cynCOSA_key(keycode) (CUINT64)((CUINT64)1U << (keycode))
 
 typedef enum cynCOSA_pxlfmt {
     cynCOSA_pxlfmt8_rgb,        /* 332 */
@@ -171,6 +211,14 @@ typedef enum cynCOSA_pxlfmt {
 } cynCOSA_pxlfmt;
 
 typedef CUINT64 cynCOSA_keypage;
+
+typedef enum cynCOSAWinEvent {
+    CYNCOSA_WINEVENT_POSITION
+} cynCOSAWinEvent;
+
+
+/* Can have any signature */
+typedef CVOID (*cynCOSACallback)();
 
 /* Window flags */
 
@@ -219,49 +267,54 @@ typedef CCONST CUINT8   cynCOSA_sflags;
 
 /* Creates a cynstance (cyn instance): */
 /* 
-    Attribute instance_p should be a valid address
-    Attribute platform takes the platform flag
+    Creates a default-style instance.
+
     Behaviour:
-    * Upon creation, checks if there's a current global and if not sets itself as the global cynstance
-    * If failed, check the result member of the cynstance (if cynstance is not zero)
-    * If no platform is specified, the function takes this as a critical error
+    - Upon creation, checks if there's a current global and if not sets itself as the global cynstance
+    - If failed, check the result member of the cynstance (if cynstance is not zero)
+    - If no platform is specified, the function takes this as a critical error
 */
-CYNDEF CYNCALL CVOID cynCOSA_InstanceCreate(cynstance* instance_p,cynCOSA_platform platform);
-/* Creates a cynstance (cyn instance) with extra flags: */
+CYNDEF CYNCALL CVOID cynCOSA_InstanceCreate(
+    cynstance* instance_p,      /* Address reserved for the cynstance */
+    cynCOSA_platform platform   /* Target platform/system */
+);
+/* Creates a cynstance (cyn instance) with extra flags */
 /* 
-    Attribute instance_p should be a valid address
-    Attribute platform takes a valid platform flag
-    Attribute flags must be a valid bitmask pattern (using "|" )
+    Create Specific variant of InstanceCreate.
+
     Behaviour:
-    * Upon creation, checks if there's a current global and if not sets itself as the global cynstance
-    * If failed, check the result member of the cynstance (if cynstance is not zero)
-    * If no platform is specified, the function takes this as a critical error 
+    - Upon creation, checks if there's a current global and if not sets itself as the global cynstance
+    - If failed, check the result member of the cynstance (if cynstance is not zero)
+    - If no platform is specified, the function takes this as a critical error 
 */
-CYNDEF CYNCALL CVOID cynCOSA_InstanceCreateS(cynstance* instance_p, cynCOSA_platform, cynCOSA_flags flags); /* Create Specific */
-/* Sets the current global reference instance for cynCOSA */
+CYNDEF CYNCALL CVOID cynCOSA_InstanceCreateS(
+    cynstance* instance_p,      /* Address reserved for the cynstance */
+    cynCOSA_platform,           /* Target platform/system */
+    cynCOSA_flags flags         /* Additional flags (bitmask) */
+);
+/* Sets the current global instance */
 /*
-    Attribute instance_p should be a valid pointer to a cynstance
+    Unsets the current instance, but does not destroy it. Windows of the previous instance should NOT be updated
+
     Behaviour:
-    * Switches the global context, any call after this will use this instance's context
+    - Switches the global context, any call after this will use this instance's context
 */
-CYNDEF CYNCALL CVOID cynCOSA_InstanceCurSet(cynstance* instance_p);
+CYNDEF CYNCALL CVOID cynCOSA_InstanceCurSet(
+    cynstance* instance_p       /* Pointer to the cynstance to be set */
+);
 /* Returns the current instance, CNULL if none */
 CYNDEF CYNCALL cynstance* cynCOSA_InstanceCurGet();
 /* Cleans up all tracked cynstance resources of the current global context */
 /* 
-    Behaviour:
-    * Any tracked resources get destroyed, and thus calls functions like WindowDestroyAll()
-    * It'll set the cynstance* to CNULL, which you can check with InstanceCurGet, this doesn't account for the input cynstance* from its creation.
-*/
-CYNDEF CYNCALL CVOID cynCOSA_InstanceDestroy();
+    This function does not clean up user allocated resources.
+    
+    Calls WindowDestroyAll(), thus will create callbacks
 
-/* Logs using the current instance's name */
-/*
-    Attributes: takes at least a cynstr
     Behaviour:
-    * Almost exactly the same as printf
+    - Any tracked resources get destroyed, and thus calls functions like WindowDestroyAll()
+    - It'll set the cynstance* to CNULL, which you can check with InstanceCurGet, this doesn't account for the input cynstance* from its creation.
 */
-CYNDEF CYNCALL CVOID cynCOSA_InstanceLog(CCONST cynstr,...); 
+CYNDEF CYNCALL CVOID cynCOSA_InstanceDestroy(); 
 
 /*
     Window memory is part of the instance memory, and thus belongs inside the CVOID* of set intance.
@@ -273,77 +326,125 @@ CYNDEF CYNCALL CVOID cynCOSA_InstanceLog(CCONST cynstr,...);
 
 /* Creates a window */
 /*
-    Attribute winfo need be a valid pointer to a wininfo struct
-    Attribute winflags is a bit-field flag
+    Window flags should be added together using the OR opperation ( | ), which means it technically is one integer.
+    
     Behaviour:
-    * Creates a window using the global context's platform definition
-    * Allocates resources within the global instance and adds itself into it's winlist
-    * On failure, cynCOSAWindow will be zero/NULL and adds error to the global context's result
+    - Creates a window using the global context's platform definition
+    - Allocates resources within the global instance and adds itself into it's winlist
+    - On failure, cynCOSAWindow will be zero/NULL and adds error to the global context's result
 */
-CYNDEF CYNCALL cynCOSAWindow cynCOSA_WindowCreate(cynCOSAWinInfo* winfo, cynCOSA_sflags winsflags);
+CYNDEF CYNCALL cynCOSAWindow cynCOSA_WindowCreate(
+    cynCOSAWinInfo* winfo,      /* Pointer to window info struct */
+    cynCOSA_sflags winflags     /* Window flags */
+);
 /* Updates a window to fetch events */
 /* 
-    Attribute window must be valid window pointer within the global instance
+    This function will fetch all events and keyinputs (as provided by the system)
+
     Behaviour:
-    * Allows the registering of new key inputs (changes) and the window's events at the time of calling
+    - Allows update of keyatlas
+    - Allows for window callbacks
 */
-CYNDEF CYNCALL CVOID cynCOSA_WindowUpdate(cynCOSAWindow window);
+CYNDEF CYNCALL CVOID cynCOSA_WindowUpdate(
+    cynCOSAWindow window        /* Valid window pointer within context */
+);
 /* Updates all windows from the global instance */
 /* 
-    !This is not recommended as it takes a long time to execute!
+    This is not recommended as it takes a long time to execute!
 */
 CYNDEF CYNCALL CVOID cynCOSA_WindowUpdateAll();
 /* Destroys a window and its resources */
-/* 
-    Attribute window should be valid within the global context
+/*     
+    BEWARE: this function does not create an event.
+
     Behaviour:
-    * Destroys (closes) a window and its resources (not including a instance's global GAPI context)
+    - Destroys (closes) a window and its resources (not including a instance's global GAPI context)
 */
-CYNDEF CYNCALL CVOID cynCOSA_WindowDestroy(cynCOSAWindow window);
+CYNDEF CYNCALL CVOID cynCOSA_WindowDestroy(
+    cynCOSAWindow window        /* Valid window pointer within context */
+);
 /* Destroys all windows of the global instance */
 /*
     This function is also called within cynCOSA_InstanceDestroy, though it remains best practice to destroy individual windows when they are no longer needed.
+
+    BEWARE: unlike WindowDestroy(window), this function does create the window close event!
 */
 CYNDEF CYNCALL CVOID cynCOSA_WindowDestroyAll();
 
 /* Retruns if the window closed/destroyed */
 /* 
-    Attribute window must be a window that has/had been created, regardless if it has been destroyed/closed
+    Sees if the window is recently closed by looking if it's part of the instance's list, if it is not set to CNULL.
 */
-CYNDEF CYNCALL CBOOL cynCOSA_WindowGetClosed(cynCOSAWindow window);
-/* Sets the window to a specific WinInfo */
-/* 
-    Attribute window must be a valid window within global context
-    Attribute winfo must point to assigned WinInfo memory
-    NOTE: There is, unlike individual attributes, no get-er for WinInfo, thus a user should always have a mental model of the attributes present
-*/
-CYNDEF CYNCALL CVOID cynCOSA_WindowSetInfo(cynCOSAWindow window, cynCOSAWinInfo* winfo);
+CYNDEF CYNCALL CBOOL cynCOSA_WindowGetClosed(
+    cynCOSAWindow window        /* Valid window pointer within context */
+);
 /* Sets a window's specific attribute */
-/* 
-    Attribute window has to be a valid window within global context
-    Attribute winattr must be of the enum cynCOSA_winattr
-    Attribute winattr_p shall point to whatever memory fits the winattr (see documentation for layouts)
+/*     
     Behaviour:
-    * Calls internal functions for these attributes, which translate to the specific platform's functions
-    * Only has access to specific parts, so check whether attributes are set-able (eg. keypages are not supported for set)
+    - Calls internal functions for these attributes, which translate to the specific platform's functions
+    - Only has access to specific parts, so check whether attributes are set-able (eg. keypages are not supported for set)
 */
-CYNDEF CYNCALL CVOID cynCOSA_WindowSetAttr(cynCOSAWindow window, cynCOSA_winattr winattr, CVOID* winattr_p);
-/* Returns a CVOID* to the specific winattr */
+CYNDEF CYNCALL CVOID cynCOSA_WindowSetAttr(
+    cynCOSAWindow window,       /* Valid window pointer within context */
+    cynCOSA_winattr winattr,    /* Window attribute to be set */
+    CVOID* winattr_p            /* Pointer to space allocated for the winattr */
+);
+/* Retrieves a window attribute  */
 /* 
-    Attribute window shall be valid within the global context
-    Attribute winattr should be a valid get attribute (see docs if a winattr is not supported for get)
-    Behaviour:
-    * Allocates memory for the specific winattr type, which should be freed by the caller,
-    * * UNLESS KEEP_HANDLE flag has been used on creation!
-    * Only has access to specific parts, so check whether attributes are get-able (eg. title is not supported for get)
+    Places/copies the data attribute data within the destination pointer
 */
-CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttr(cynCOSAWindow window, cynCOSA_winattr winattr);
+CYNDEF CYNCALL CVOID cynCOSA_WindowGetAttr(
+    cynCOSAWindow window,       /* Valid window pointer within context */
+    cynCOSA_winattr winattr,    /* Window attribute to be received*/
+    CVOID*winattr_dest          /* Pointer to space allocated for the winattr */
+);
+/*  Retrieves a window attribute safely */
+/* 
+    Makes sure that data does not escape boundries.
+
+    Behaviour:
+    - Checks if enough space is present, if not: CYNCOSA_RESULT_PARTIAL.
+    - Places/copies the data attribute data within the destination pointer
+*/
+CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttrSafe(
+    cynCOSAWindow window,       /* Valid window pointer within context */
+    cynCOSA_winattr winattr,    /* Window attribute to be retrieved */
+    CVOID*winattr_dest,         /* Pointer to the beginning of the allocated space for the window attribute */
+    CVOID*winattr_destend       /* Pointer to the end of the allocated space for the winow attribute */
+);
+/* Retrieves the first keypage of the keyatlas */
+/*
+    Attribute window has to be valid within curent context
+    
+    Behaviour:
+    - Returns a pointer to first keypage of the keyatlas
+    - This keyatlas is managed by the window, thus should not be freed!
+*/
+CYNDEF CYNCALL cynCOSA_keypage*cynCOSA_WindowGetKeyAtlas(
+    cynCOSAWindow window    /* Valid window pointer within context */
+);
 /* Shows a window */
 /* 
-    Attribute window should be a valid window within the global context
-    Attribute show_window should be a valid CBOOL (CIM boolean)
+    Hides/unhides the window, more or less a minimise operation.
+    This operation does not create an event!
 */
-CYNDEF CYNCALL CVOID cynCOSA_WindowShow(cynCOSAWindow window, CBOOL show_window);
+CYNDEF CYNCALL CVOID cynCOSA_WindowShow(
+    cynCOSAWindow window,   /* Valid window pointer within context */
+    CBOOL show_window       /* Value indicating if window should be shown */
+);
+/* Sets a callback for cynCOSA window events */
+/* 
+    callback should be filled in so (cynCOSACallback)function ; this converts/typecasts it to a callback (aka a opaque function pointer)
+
+    Normally, these would be used in a queue, but due to cynCOSA's design (aka me being lazy) you'll need to provide your own callbacks.
+    BEWARE: callbacks provided here (window callback) shall assume global context and thus shall not receive instance information (unless explicit)
+    BEWARE: function signatures are required to match the documentation's.
+*/
+CYNDEF CYNCALL CVOID cynCOSA_WindowCallback(
+    cynCOSAWindow window,       /* Valid window pointer within context */
+    cynCOSAWinEvent winevent,   /* Type of window event the callback is for */
+    cynCOSACallback callback    /* The function the window will call on the event */
+);
 
 
 
@@ -356,13 +457,13 @@ CYNDEF CYNCALL CVOID cynCOSA_instance_create(cynstance* instance_p, cynCOSA_plat
 CYNDEF CYNCALL CVOID cynCOSA_instance_createspecific(cynstance* instance_p, cynCOSA_platform platform, cynCOSA_flags flags);
 CYNDEF CYNCALL CVOID cynCOSA_instance_destroy(cynstance* instance_p);
 
-CYNDEF CYNCALL cynCOSAWindow cynCOSA_window_create(cynstance* instance_p, cynCOSAWinInfo* winfo, cynCOSA_sflags winsflags);
+CYNDEF CYNCALL cynCOSAWindow cynCOSA_window_create(cynstance* instance_p, cynCOSAWinInfo* winfo, cynCOSA_sflags winflags);
 CYNDEF CYNCALL CVOID cynCOSA_window_update(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_updateall(cynstance* instance_p);
 CYNDEF CYNCALL CVOID cynCOSA_window_destroy(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_destroyall(cynstance* instance_p);
 
-CYNDEF CYNCALL CVOID cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
+CYNDEF CYNCALL CBOOL cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_setinfo(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinInfo*);
 CYNDEF CYNCALL CVOID cynCOSA_window_setattr(cynstance* instance_p, cynCOSAWindow window, cynCOSA_winattr winattr, CVOID* winattr_p);
 
