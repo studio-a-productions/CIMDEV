@@ -2,7 +2,7 @@
 
 This project is technically two *libraries*, `CIM` and `cyncosa` (*though the former may also be referred to as **cim***). Cyncosa is built on top of CIM, and thus their development is currently intertwined (CIM gets updated out of the needs from cynCOSA).
 
-This is a **development repository** and thus is not a *release*, nor is it a *publicly contributable* project. You may view its development in real-time, but do not expect the code or comments to be "perfect".
+This is a **development repository** and thus is not a *release*, nor is it a *publicly contributable* project. You may view its development in real-time, but do not expect the code or comments to be "perfect". 
 
 ## Private Contribution
 
@@ -10,7 +10,7 @@ For those who are truly interested, you *may* use `GitHub Issues` to help me fin
 
 # CIM
 
-**CIM**, currently meaning `CIM Is Managed` (*leaning on the **GNU** tradition*), is a `libc`-abstraction and overwritable API. It provides either a stable ABI (when *implementing*), or a way to change parts of projects without needing to change the code everywhere.
+**CIM**, currently meaning `CIM Is Managed` (*leaning on the **GNU** tradition of recursive naming*), is a `libc`-abstraction and overwritable API. It provides either a stable ABI (when *implementing*), or a way to change parts of projects without needing to change the code everywhere.
 
 **CIM** allows for even the most basic types (int, void, float, etc.) to be overwritten. It does not provide overwrites for `uncertain keywords` such as typedef or struct (see docs).
 
@@ -115,9 +115,18 @@ CIM naturally defines this as an extern constant, and thus in theory you can poi
 
 # cynCOSA
 
-`cynCOSA` or *cyn's cross operating system API* is inspired by `muCOSA` by *muukid*. In some cases, it may be a direct reference to it, which is evident in the name. It is important to note that despite similarities, no code has been copied or stolen (*apart from ideas*).
+`cynCOSA` or *cyn's Cross Operating System API* is inspired by `muCOSA` by *muukid*. In some cases, it may be a direct reference to it, which is evident in the name. It is important to note that despite similarities, no code has been copied or stolen (*apart from ideas*).
 
 `cynCOSA` tries to provide both a `global state` and `thread-safe` *states*, but these are **not interchangeable**. 
+
+# cynCOSA Undefined Behaviour
+
+Like `C`, cynCOSA has places where there may or may not be undefined behaviour. The reasoning behind undefined behaviour is that no matter how unified cynCOSA's API may seem, platform implementations always differ. 
+
+This is why cynCOSA normally documents the expected behaviour (that can be noticed by user). Undefined behaviour rises when you for example try to allocate resources without specification.
+
+In general, undefined behaviour is usually avoided in the API, though you may still find places where it differs.
+
 
 ## Documentation coming soon.
 
