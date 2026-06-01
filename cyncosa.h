@@ -12,7 +12,7 @@
 #include "cyncosa_cimport.h"
 
 #ifndef CYNDEF
-#ifdef CYN_IMPLEMENT
+#ifdef CYNCOSA_IMPLEMENT
 #define CYNDEF
 #else
 #define CYNDEF CIMEXTR
@@ -50,27 +50,36 @@ typedef struct cynstance {
 } cynstance;
 
 typedef enum cynCOSA_platform { /* platform = windowing platform/system */
-    CYNCOSA_PLATFORM_WIN32 = 0, /* No GAPI support if enabled for a window */
-    CYNCOSA_PLATFORM_WIN32_GL, /* OpenGL GAPI support when enabled per window */
-    CYNCOSA_PLATFORM_WIN32_VK, /* Vulkan GAPI support when enabled per window */
-    CYNCOSA_PLATFORM_WIN32_D3D, /* Direct3D GAPI support when enabled per window */
-    CYNCOSA_PLATFORM_WIN32_GXL, /* of course our own future GAPI: GXL */
+    CYNCOSA_PLATFORM_WIN32 = 0,
     CYNCOSA_PLATFORM_MACOS
     /* More CYNCOSA_PLATFORM_* flags */
 } cynCOSA_platform;
 
-/* */
-#define CYNCOSA_CYNST_DEBUG (1U << 0U)
-/* Ensure there is padding between elements */
-#define CYNCOSA_CYNST_PADDING (1U << 1U)
+/* Debug enabled for this instance */
+#define CYNCOSA_CYNST_DEBUG         (1U << 0U)
+/* Ensure there is padding (at least 1 byte) between elements */
+#define CYNCOSA_CYNST_PADDING       (1U << 1U)
 /* Use error checking/context */
-#define CYNCOSA_CYNST_ERCONTX (1U << 2U)
-/* Does not allocate any resources for windows */
-#define CYNCOSA_CYNST_BACKGROUND (1U << 3U)
+#define CYNCOSA_CYNST_ERCONTX       (1U << 2U)
+/* Does not allocate any resources for windows (if attempted fails) */
+#define CYNCOSA_CYNST_BACKGROUND    (1U << 3U)
+/* bits 8 to 16 are reserved for GAPIs */
+#if defined(CYNCOSA_SUPPORT_OPENGL) && defined(CYNCOSA_SUPPORT_VULKAN)
+#define CYNCOSA_CYNST_GAPI_OPENGL   (1U << 8U)
+#define CYNCOSA_CYNST_GAPI_VULKAN   (1U << 9U)
+#elif defined(CYNCOSA_SUPPORT_OPENGL)
+#define CYNCOSA_CYNST_GAPI_OPENGL   (1U << 8U)
+#define CYNCOSA_CYNST_GAPI_VULKAN   0U
+#elif defined(CYNCOSA_SUPPORT_VULKAN)
+#define CYNCOSA_CYNST_GAPI_OPENGL   0U
+#define CYNCOSA_CYNST_GAPI_VULKAN   (1U << 9U)
 
+#else 
+#define CYNCOSA_CYNST_GAPI_OPENGL   0U
+#define CYNCOSA_CYNST_GAPI_VULKAN   0U
+#endif
 
-
-typedef enum cynCOSA_winattr {
+typedef enum cynCOSAWinAttr {
     CYNCOSA_WINATTR_TITLE,          /* Set only */
     CYNCOSA_WINATTR_POS, 
     CYNCOSA_WINATTR_POS_X,
@@ -87,7 +96,7 @@ typedef enum cynCOSA_winattr {
     CYNCOSA_WINATTR_PIXELFORMAT,
     CYNCOSA_WINATTR_FOCUS,          /* Get only */
     CYNCOSA_WINATTR_KEYATLAS_SIZE,  /* Get only */
-} cynCOSA_winattr;
+} cynCOSAWinAttr;
 
 typedef enum cynCOSA_stdkeys {
     CYNCOSA_KEY_A = 0,
@@ -187,9 +196,9 @@ typedef enum cynCOSA_funckeys {
     
     The keys (for example stdkey and funckey), are indexes. Adding more keypages is always possible, though it may complicate stuff.
 */
-#define cynCOSA_key(keycode) (CUINT64)((CUINT64)1U << (keycode))
+#define cynCOSA_key(keycode) (CUINT64)((CUINT64)1 << (keycode))
 
-typedef enum cynCOSA_pxlfmt {
+typedef enum cynCOSAPixelFormat {
     cynCOSA_pxlfmt8_rgb,        /* 332 */
     cynCOSA_pxlfmt8_rgba,       /* 2321*/
     cynCOSA_pxlfmt8_rgbaMono,   /* 2222 */
@@ -208,58 +217,61 @@ typedef enum cynCOSA_pxlfmt {
     cynCOSA_pxlfmt64_rgba,      /* 16 16 16 16 */
     cynCOSA_pxlfmt64_floatrgba, /* 16 bit float per channel */
     cynCOSA_pxlfmt64_depthRGBA  /* pxlfmt32_monotone + pxlfmt32_rgbaMono */
-} cynCOSA_pxlfmt;
+} cynCOSAPixelFormat;
 
 typedef CUINT64 cynCOSA_keypage;
 
 typedef enum cynCOSAWinEvent {
-    CYNCOSA_WINEVENT_POSITION
+    CYNCOSA_WINEVENT_POSITION,
+    CYNCOSA_WINEVENT_RESIZE,
+    CYNCOSA_WINEVENT_FOCUS,
+    CYNCOSA_WINEVENT_CLOSE
 } cynCOSAWinEvent;
 
 
 /* Can have any signature */
 typedef CVOID (*cynCOSACallback)();
 
+
+typedef CUINT64  cynCOSA_lflags;
+typedef CUINT32  cynCOSA_flags;
+typedef CUINT16  cynCOSA_hflags;
+typedef CUINT8   cynCOSA_sflags;
+
 /* Window flags */
 
 /* Center makes pos an offset from screen center */
-#define CYNCOSA_WIN_POS_CENTER  (1U << 0U)
+#define CYNCOSA_WIN_POS_CENTER  (cynCOSA_sflags)(1U << 0U)
 /* Create a window without a border/titlebar */
-#define CYNCOSA_WIN_BORDER_NONE (1U << 1U)
-/* Show the window on creation */
-#define CYNCOSA_WIN_SHOWN       (1U << 2U)
-/* Does the window use the platform's GAPI? */
-#define CYNCOSA_WIN_GAPI        (1U << 3U)
+#define CYNCOSA_WIN_BORDER_NONE (cynCOSA_sflags)(1U << 1U)
+/* Hide the window on creation */
+#define CYNCOSA_WIN_HIDE        (cynCOSA_sflags)(1U << 2U)
+/* If window is fullscreen size and position are IGNORED */
+#define CYNCOSA_WIN_FULLSCREEN  (cynCOSA_sflags)(1U << 3U)
 /* Sets the window's background to black on redraw without content, otherwise undefined */
-#define CYNCOSA_WIN_BACK        (1U << 4U)
-/* Allocates a 256x256 RGBA sprite buffer for the window (alpha is bit, regardless of pixelformat) */
-#define CYNCOSA_WIN_SPRITE      (1U << 5U)
+#define CYNCOSA_WIN_BACK        (cynCOSA_sflags)(1U << 4U)
+/* Allocates a 256x256x256 RGBA sprite buffer for the window, undefined behaviour if no pxlfmt is set */
+#define CYNCOSA_WIN_SPRITE      (cynCOSA_sflags)(1U << 5U)
 /* Are the pixels inverted? */
-#define CYNCOSA_WIN_PXLFMT_INV  (1U << 6U)
+#define CYNCOSA_WIN_PXLFMT_INV  (cynCOSA_sflags)(1U << 6U)
 /* Keeps a direct keypage array */
-#define CYNCOSA_WIN_KEEP_HANDLE (1U << 7U)
+#define CYNCOSA_WIN_KEEP_HANDLE (cynCOSA_sflags)(1U << 7U)
 
 typedef CCHAR* cynstr;
 typedef CVOID* cynCOSAWindow;
-typedef CBYTE cynCOSAWinPixelFormat;
 
 typedef struct cynCOSAWinInfo {
     cynstr title;
+    cynCOSAPixelFormat pxlf;
     CUINT32 x;
     CUINT32 y;
     CUINT16 width;
     CUINT16 height;
     CUINT16 width_min;  /* cyncosa min req width is 120px, if lower, defaults to 120px */
-    CUINT16 width_max;
+    CUINT16 width_max;  /* if set to 0, will set no max width */
     CUINT16 height_min; /* cyncosa min req height is 1px, if lower, defaults to 1px */
-    CUINT16 height_max;
-    cynCOSAWinPixelFormat pxlf;
-    CBOOL focus;        /* focus onstart */
+    CUINT16 height_max; /* if set to 0, will set no max height */
 } cynCOSAWinInfo;
-
-typedef CCONST CUINT64  cynCOSA_lflags;
-typedef CCONST CUINT32  cynCOSA_flags;
-typedef CCONST CUINT8   cynCOSA_sflags;
 
 /* Making a cynstance also sets it if no Cur is set */
 /* It is not recommended to manually poke into cynstances as their internal structure remains unknown (platform specific) */
@@ -289,7 +301,7 @@ CYNDEF CYNCALL CVOID cynCOSA_InstanceCreate(
 */
 CYNDEF CYNCALL CVOID cynCOSA_InstanceCreateS(
     cynstance* instance_p,      /* Address reserved for the cynstance */
-    cynCOSA_platform,           /* Target platform/system */
+    cynCOSA_platform platform,           /* Target platform/system */
     cynCOSA_flags flags         /* Additional flags (bitmask) */
 );
 /* Sets the current global instance */
@@ -386,7 +398,7 @@ CYNDEF CYNCALL CBOOL cynCOSA_WindowGetClosed(
 */
 CYNDEF CYNCALL CVOID cynCOSA_WindowSetAttr(
     cynCOSAWindow window,       /* Valid window pointer within context */
-    cynCOSA_winattr winattr,    /* Window attribute to be set */
+    cynCOSAWinAttr winattr,    /* Window attribute to be set */
     CVOID* winattr_p            /* Pointer to space allocated for the winattr */
 );
 /* Retrieves a window attribute  */
@@ -395,7 +407,7 @@ CYNDEF CYNCALL CVOID cynCOSA_WindowSetAttr(
 */
 CYNDEF CYNCALL CVOID cynCOSA_WindowGetAttr(
     cynCOSAWindow window,       /* Valid window pointer within context */
-    cynCOSA_winattr winattr,    /* Window attribute to be received*/
+    cynCOSAWinAttr winattr,    /* Window attribute to be received*/
     CVOID*winattr_dest          /* Pointer to space allocated for the winattr */
 );
 /*  Retrieves a window attribute safely */
@@ -408,7 +420,7 @@ CYNDEF CYNCALL CVOID cynCOSA_WindowGetAttr(
 */
 CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttrSafe(
     cynCOSAWindow window,       /* Valid window pointer within context */
-    cynCOSA_winattr winattr,    /* Window attribute to be retrieved */
+    cynCOSAWinAttr winattr,    /* Window attribute to be retrieved */
     CVOID*winattr_dest,         /* Pointer to the beginning of the allocated space for the window attribute */
     CVOID*winattr_destend       /* Pointer to the end of the allocated space for the winow attribute */
 );
@@ -465,6 +477,6 @@ CYNDEF CYNCALL CVOID cynCOSA_window_destroyall(cynstance* instance_p);
 
 CYNDEF CYNCALL CBOOL cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
 CYNDEF CYNCALL CVOID cynCOSA_window_setinfo(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinInfo*);
-CYNDEF CYNCALL CVOID cynCOSA_window_setattr(cynstance* instance_p, cynCOSAWindow window, cynCOSA_winattr winattr, CVOID* winattr_p);
+CYNDEF CYNCALL CVOID cynCOSA_window_setattr(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinAttr winattr, CVOID* winattr_p);
 
 #endif
