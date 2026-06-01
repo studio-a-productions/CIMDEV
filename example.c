@@ -12,8 +12,7 @@ int main() {
 	const cynCOSAWinInfo myinfo = {
 		.title = "Hello World",
 		.x = 500U,
-		.y = 300U,
-		.focus = CTRUE
+		.y = 300U
 	};
 
 	cynCOSAWindow mywin = cynCOSA_WindowCreate(&myinfo, 0U);
