@@ -22,8 +22,9 @@
 /* currently empty, but defined for future use when filled in */
 #define CYNCALL
 
-/* cyn_version: 0x (xx)major, (xxx)minor, (xx)patch */
-#define cyn_version ((CUINT32)(0x0100000))
+#define CYNCOSA_VERSION_MAJ 0
+#define CYNCOSA_VERSION_MIN 1
+#define CYNCOSA_VERSION_PATCH 3
 
 /*
     cynCOSA uses "instances", which contain their own platform information.
@@ -49,20 +50,39 @@ typedef struct cynstance {
     cynCOSA_result result;
 } cynstance;
 
+/* Can have any signature */
+typedef CVOID (*cynCOSACallback)();
+
+typedef CUINT64  cynCOSA_lflags;
+typedef CUINT32  cynCOSA_flags;
+typedef CUINT16  cynCOSA_hflags;
+typedef CUINT8   cynCOSA_sflags;
+
 typedef enum cynCOSA_platform { /* platform = windowing platform/system */
     CYNCOSA_PLATFORM_WIN32 = 0,
     CYNCOSA_PLATFORM_MACOS
     /* More CYNCOSA_PLATFORM_* flags */
 } cynCOSA_platform;
 
+#ifndef CIM_COMPILE_RELEASE
 /* Debug enabled for this instance */
 #define CYNCOSA_CYNST_DEBUG         (1U << 0U)
+#else
+#define CYNCOSA_CYNST_DEBUG         0U
+#endif
 /* Ensure there is padding (at least 1 byte) between elements */
 #define CYNCOSA_CYNST_PADDING       (1U << 1U)
+#ifndef CIM_COMPILE_DEBUG
 /* Use error checking/context */
 #define CYNCOSA_CYNST_ERCONTX       (1U << 2U)
+#else 
+/* Error checking disabled */
+#define CYNCOSA_CYNST_ERCONTX       0U
+#endif
 /* Does not allocate any resources for windows (if attempted fails) */
 #define CYNCOSA_CYNST_BACKGROUND    (1U << 3U)
+/* Don't ask why there are background tasks in cynCOSA... */
+
 /* bits 8 to 16 are reserved for GAPIs */
 #if defined(CYNCOSA_SUPPORT_OPENGL) && defined(CYNCOSA_SUPPORT_VULKAN)
 #define CYNCOSA_CYNST_GAPI_OPENGL   (1U << 8U)
@@ -78,6 +98,72 @@ typedef enum cynCOSA_platform { /* platform = windowing platform/system */
 #define CYNCOSA_CYNST_GAPI_OPENGL   0U
 #define CYNCOSA_CYNST_GAPI_VULKAN   0U
 #endif
+
+
+typedef enum cynCOSAPixelFormat {
+    cynCOSA_pxlfmt8_rgb,        /* 332 */
+    cynCOSA_pxlfmt8_rgba,       /* 2321*/
+    cynCOSA_pxlfmt8_rgbaMono,   /* 2222 */
+    cynCOSA_pxlfmt8_monotone,   /* 8bit grayscale */
+    cynCOSA_pxlfmt16_rgb,        /* 565 */  
+    cynCOSA_pxlfmt16_rgba,      /* 5551 */
+    cynCOSA_pxlfmt16_rgbaMono,  /* 4444 */
+    cynCOSA_pxlfmt16_monotone,  /* 16bit grayscale */
+    cynCOSA_pxlfmt32_rgb,       /* 11 11 10 */
+    cynCOSA_pxlfmt32_rgba,      /* 10 11 10 1 */
+    cynCOSA_pxlfmt32_rgbaMono,  /* 8888 */
+    cynCOSA_pxlfmt32_monotone,
+    cynCOSA_pxlfmt32_monofloat, /* 32F grayscale */
+    cynCOSA_pxlfmt32_depthRGB,  /* 24 bit mono + pxlfmt8_rgb */
+    cynCOSA_pxlfmt32_depthRGBA, /* 24 bit mono + pxlfmt8_rgba */
+    cynCOSA_pxlfmt64_rgba,      /* 16 16 16 16 */
+    cynCOSA_pxlfmt64_floatrgba, /* 16 bit float per channel */
+    cynCOSA_pxlfmt64_depthRGBA  /* pxlfmt32_monotone + pxlfmt32_rgbaMono */
+} cynCOSAPixelFormat;
+
+/* Window stuff */
+
+/* Center makes pos an offset from screen center */
+#define CYNCOSA_WIN_POS_CENTER  (cynCOSA_sflags)(1U << 0U)
+/* Create a window without a border/titlebar */
+#define CYNCOSA_WIN_BORDER_NONE (cynCOSA_sflags)(1U << 1U)
+/* Hide the window on creation */
+#define CYNCOSA_WIN_HIDE        (cynCOSA_sflags)(1U << 2U)
+/* If window is fullscreen size and position are IGNORED */
+#define CYNCOSA_WIN_FULLSCREEN  (cynCOSA_sflags)(1U << 3U)
+/* Sets the window's background to black on redraw without content, otherwise undefined */
+#define CYNCOSA_WIN_BACK        (cynCOSA_sflags)(1U << 4U)
+/* Allocates a 256x256x256 RGBA sprite buffer for the window, undefined behaviour if no pxlfmt is set */
+#define CYNCOSA_WIN_SPRITE      (cynCOSA_sflags)(1U << 5U)
+/* Are the pixels inverted? */
+#define CYNCOSA_WIN_PXLFMT_INV  (cynCOSA_sflags)(1U << 6U)
+/* Keeps a direct keypage array */
+#define CYNCOSA_WIN_KEEP_HANDLE (cynCOSA_sflags)(1U << 7U)
+
+typedef CCHAR* cynstr;
+typedef CVOID* cynCOSAWindow;
+
+typedef struct cynCOSAWinInfo {
+    cynstr title;
+    cynCOSAPixelFormat pxlf;
+    CUINT32 x;
+    CUINT32 y;
+    CUINT16 width;
+    CUINT16 height;
+    CUINT16 width_min;  /* cyncosa min req width is 120px, if lower, defaults to 120px */
+    CUINT16 width_max;  /* if set to 0, will set no max width */
+    CUINT16 height_min; /* cyncosa min req height is 1px, if lower, defaults to 1px */
+    CUINT16 height_max; /* if set to 0, will set no max height */
+} cynCOSAWinInfo;
+
+typedef enum cynCOSAWinEvent {
+    CYNCOSA_WINEVENT_POSITION,
+    CYNCOSA_WINEVENT_RESIZE,
+    CYNCOSA_WINEVENT_FOCUS,
+    CYNCOSA_WINEVENT_CLOSE,
+    CYNCOSA_WINEVENT_MINIMIZE,
+    CYNCOSA_WINEVENT_MAXIMIZE
+} cynCOSAWinEvent;
 
 typedef enum cynCOSAWinAttr {
     CYNCOSA_WINATTR_TITLE,          /* Set only */
@@ -97,6 +183,15 @@ typedef enum cynCOSAWinAttr {
     CYNCOSA_WINATTR_FOCUS,          /* Get only */
     CYNCOSA_WINATTR_KEYATLAS_SIZE,  /* Get only */
 } cynCOSAWinAttr;
+
+/*
+    cynCOSA provides keypages, which are 64 bit unsigned ints where each bit represents whether a key is down or not.
+    
+    The keys (for example stdkey and funckey), are indexes. Adding more keypages is always possible, though it may complicate stuff.
+*/
+
+typedef CUINT64 cynCOSAKeypage;
+#define cynCOSA_key(keycode) ((cynCOSAKeypage)1 << (keycode))
 
 typedef enum cynCOSA_stdkeys {
     CYNCOSA_KEY_A = 0,
@@ -191,87 +286,28 @@ typedef enum cynCOSA_funckeys {
     CYNCOSA_KEY_FUNC22
 } cynCOSA_funckeys;
 
-/*
-    cynCOSA provides keypages, which are 64 bit unsigned ints where each bit represents whether a key is down or not.
-    
-    The keys (for example stdkey and funckey), are indexes. Adding more keypages is always possible, though it may complicate stuff.
-*/
-#define cynCOSA_key(keycode) (CUINT64)((CUINT64)1 << (keycode))
+typedef enum cynCOSA_npadkeys {
+    CYNCOSA_KEY_NPAD_0,
+    CYNCOSA_KEY_NPAD_1,
+    CYNCOSA_KEY_NPAD_2,
+    CYNCOSA_KEY_NPAD_3,
+    CYNCOSA_KEY_NPAD_4,
+    CYNCOSA_KEY_NPAD_5,
+    CYNCOSA_KEY_NPAD_6,
+    CYNCOSA_KEY_NPAD_7,
+    CYNCOSA_KEY_NPAD_8,
+    CYNCOSA_KEY_NPAD_9,
+    CYNCOSA_KEY_NPAD_DELETE,
+    CYNCOSA_KEY_NPAD_RETURN,
+    CYNCOSA_KEY_NPAD_HOME,
+    CYNCOSA_KEY_NPAD_END,
+    CYNCOSA_KEY_NPAD_PAGEUP,
+    CYNCOSA_KEY_NPAD_PAGEDOWN,
+    CYNCOSA_KEY_NPAD_EQUAL,
+    CYNCOSA_KEY_NPAD_PLUS,
+    CYNCOSA_KEY_NPAD_MINUS
+} cynCOSA_npadkeys;
 
-typedef enum cynCOSAPixelFormat {
-    cynCOSA_pxlfmt8_rgb,        /* 332 */
-    cynCOSA_pxlfmt8_rgba,       /* 2321*/
-    cynCOSA_pxlfmt8_rgbaMono,   /* 2222 */
-    cynCOSA_pxlfmt8_monotone,   /* 8bit grayscale */
-    cynCOSA_pxlfmt16_rgb,        /* 565 */  
-    cynCOSA_pxlfmt16_rgba,      /* 5551 */
-    cynCOSA_pxlfmt16_rgbaMono,  /* 4444 */
-    cynCOSA_pxlfmt16_monotone,  /* 16bit grayscale */
-    cynCOSA_pxlfmt32_rgb,       /* 11 11 10 */
-    cynCOSA_pxlfmt32_rgba,      /* 10 11 10 1 */
-    cynCOSA_pxlfmt32_rgbaMono,  /* 8888 */
-    cynCOSA_pxlfmt32_monotone,
-    cynCOSA_pxlfmt32_monofloat, /* 32F grayscale */
-    cynCOSA_pxlfmt32_depthRGB,  /* 24 bit mono + pxlfmt8_rgb */
-    cynCOSA_pxlfmt32_depthRGBA, /* 24 bit mono + pxlfmt8_rgba */
-    cynCOSA_pxlfmt64_rgba,      /* 16 16 16 16 */
-    cynCOSA_pxlfmt64_floatrgba, /* 16 bit float per channel */
-    cynCOSA_pxlfmt64_depthRGBA  /* pxlfmt32_monotone + pxlfmt32_rgbaMono */
-} cynCOSAPixelFormat;
-
-typedef CUINT64 cynCOSA_keypage;
-
-typedef enum cynCOSAWinEvent {
-    CYNCOSA_WINEVENT_POSITION,
-    CYNCOSA_WINEVENT_RESIZE,
-    CYNCOSA_WINEVENT_FOCUS,
-    CYNCOSA_WINEVENT_CLOSE
-} cynCOSAWinEvent;
-
-
-/* Can have any signature */
-typedef CVOID (*cynCOSACallback)();
-
-
-typedef CUINT64  cynCOSA_lflags;
-typedef CUINT32  cynCOSA_flags;
-typedef CUINT16  cynCOSA_hflags;
-typedef CUINT8   cynCOSA_sflags;
-
-/* Window flags */
-
-/* Center makes pos an offset from screen center */
-#define CYNCOSA_WIN_POS_CENTER  (cynCOSA_sflags)(1U << 0U)
-/* Create a window without a border/titlebar */
-#define CYNCOSA_WIN_BORDER_NONE (cynCOSA_sflags)(1U << 1U)
-/* Hide the window on creation */
-#define CYNCOSA_WIN_HIDE        (cynCOSA_sflags)(1U << 2U)
-/* If window is fullscreen size and position are IGNORED */
-#define CYNCOSA_WIN_FULLSCREEN  (cynCOSA_sflags)(1U << 3U)
-/* Sets the window's background to black on redraw without content, otherwise undefined */
-#define CYNCOSA_WIN_BACK        (cynCOSA_sflags)(1U << 4U)
-/* Allocates a 256x256x256 RGBA sprite buffer for the window, undefined behaviour if no pxlfmt is set */
-#define CYNCOSA_WIN_SPRITE      (cynCOSA_sflags)(1U << 5U)
-/* Are the pixels inverted? */
-#define CYNCOSA_WIN_PXLFMT_INV  (cynCOSA_sflags)(1U << 6U)
-/* Keeps a direct keypage array */
-#define CYNCOSA_WIN_KEEP_HANDLE (cynCOSA_sflags)(1U << 7U)
-
-typedef CCHAR* cynstr;
-typedef CVOID* cynCOSAWindow;
-
-typedef struct cynCOSAWinInfo {
-    cynstr title;
-    cynCOSAPixelFormat pxlf;
-    CUINT32 x;
-    CUINT32 y;
-    CUINT16 width;
-    CUINT16 height;
-    CUINT16 width_min;  /* cyncosa min req width is 120px, if lower, defaults to 120px */
-    CUINT16 width_max;  /* if set to 0, will set no max width */
-    CUINT16 height_min; /* cyncosa min req height is 1px, if lower, defaults to 1px */
-    CUINT16 height_max; /* if set to 0, will set no max height */
-} cynCOSAWinInfo;
 
 /* Making a cynstance also sets it if no Cur is set */
 /* It is not recommended to manually poke into cynstances as their internal structure remains unknown (platform specific) */
@@ -302,7 +338,7 @@ CYNDEF CYNCALL CVOID cynCOSA_InstanceCreate(
 CYNDEF CYNCALL CVOID cynCOSA_InstanceCreateS(
     cynstance* instance_p,      /* Address reserved for the cynstance */
     cynCOSA_platform platform,           /* Target platform/system */
-    cynCOSA_flags flags         /* Additional flags (bitmask) */
+    cynCOSA_flags flags         /* Additional flags (bitmask), such as GAPI, all under CYNCOSA_CYNST_* */
 );
 /* Sets the current global instance */
 /*
@@ -432,9 +468,11 @@ CYNDEF CYNCALL CVOID*cynCOSA_WindowGetAttrSafe(
     - Returns a pointer to first keypage of the keyatlas
     - This keyatlas is managed by the window, thus should not be freed!
 */
-CYNDEF CYNCALL cynCOSA_keypage*cynCOSA_WindowGetKeyAtlas(
+CYNDEF CYNCALL cynCOSAKeypage*cynCOSA_WindowGetKeyAtlas(
     cynCOSAWindow window    /* Valid window pointer within context */
 );
+
+
 /* Shows a window */
 /* 
     Hides/unhides the window, more or less a minimise operation.

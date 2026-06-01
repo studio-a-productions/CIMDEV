@@ -1,12 +1,21 @@
-#include "cyncosa.h"
 /*
 	Example file that creates a window and then destroys it on keypress "escape"
+
+	Creates an instance with OpenGL
+	Creates a window within that instance
+	Waits till the escape key is pressed
+	Destroys resources
 */
+
+#define CYNCOSA_SUPPORT_OPENGL /* ensure opengl is enabled */
+#define CIM_COMPILE_RELEASE /* compile release */
+#include "cyncosa.h" 
+
 int main() {
-	cynstance myinst;
+	cynstance myinst; /* handle of cynstance */
 
 
-	cynCOSA_InstanceCreate(&myinst, CYNCOSA_PLATFORM_WIN32);
+	cynCOSA_InstanceCreateS(&myinst, CYNCOSA_PLATFORM_WIN32, CYNCOSA_CYNST_GAPI_OPENGL);
 	if (myinst.result != CYNCOSA_RESULT_COMPLETED)
 		return 1;
 	const cynCOSAWinInfo myinfo = {
