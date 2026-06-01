@@ -67,7 +67,8 @@ CIMCALL is used by all of CIM's functions, and *could* be used to make a compile
 The primitive implicit types are the following:
 - CIMSIGN: `signed`
 - CIMUNSIGN: `unsigned`
-- CCONST: `const` (*note: you may change it into constexpr for C++-only projects*)
+- CCONST: `const` (*note: you may map this to CCONSTEXPR*)
+- CCONSTEXPR: `const` in C or `constexpr` in C++
 
 ## Explicit Types
 
