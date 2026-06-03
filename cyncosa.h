@@ -19,8 +19,34 @@
 #endif
 #endif
 
+#define CYNCOSA_FLAGS_NONE 0U
+
+#ifdef CYNCOSA_BACKEND
+typedef struct cynCOSAHandle {
+    cynCOSA_platform platform;
+    cynCOSACallback* fns;
+    CIZE fncount;
+    CVOID* context; /* implementation defined */
+} cynCOSAHandle;
+
+CIM_ADV_BUF_GEN(cynCOSAHandleBuffer, cynCOSAHandle*);
+
+typedef struct cynCOSAGlobalState {
+    cynCOSAHandleBuffer handles;
+    cynstance* ginst;
+    CIZE cynsts;
+    CIZE gMxWindow;
+    cynCOSA_result gresult;
+} cynCOSAGlobalState; 
+
+CYNDEF cynCOSAGlobalState cynCOSAState;
+
+#endif
+
+
 /* currently empty, but defined for future use when filled in */
 #define CYNCALL
+
 
 #define CYNCOSA_VERSION_MAJ 0
 #define CYNCOSA_VERSION_MIN 1
@@ -40,6 +66,7 @@
 */
 
 typedef enum cynCOSA_result {
+    CYNCOSA_RESULT_NONE = -1,
     CYNCOSA_RESULT_COMPLETED = 0,
     CYNCOSA_RESULT_FAILED,
     CYNCOSA_RESULT_PARTIAL
@@ -192,6 +219,7 @@ typedef enum cynCOSAWinAttr {
 
 typedef CUINT64 cynCOSAKeypage;
 #define cynCOSA_key(keycode) ((cynCOSAKeypage)1 << (keycode))
+#define cynCOSAKeyPressed(keypage, keycode) (keypage) & cynCOSA_key(keycode)
 
 typedef enum cynCOSA_stdkeys {
     CYNCOSA_KEY_A = 0,
@@ -514,7 +542,7 @@ CYNDEF CYNCALL CVOID cynCOSA_window_destroy(cynstance* instance_p, cynCOSAWindow
 CYNDEF CYNCALL CVOID cynCOSA_window_destroyall(cynstance* instance_p);
 
 CYNDEF CYNCALL CBOOL cynCOSA_window_getclosed(cynstance* instance_p, cynCOSAWindow window);
-CYNDEF CYNCALL CVOID cynCOSA_window_setinfo(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinInfo*);
+CYNDEF CYNCALL CVOID cynCOSA_window_getattr(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinAttr winattr, CVOID* winattr_p);
 CYNDEF CYNCALL CVOID cynCOSA_window_setattr(cynstance* instance_p, cynCOSAWindow window, cynCOSAWinAttr winattr, CVOID* winattr_p);
 
 #endif

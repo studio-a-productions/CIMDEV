@@ -154,8 +154,14 @@ CIMDEF CCONST CBOOL CIM_STD_BOOL_FALSE;
 
 */
 
+#ifdef __cplusplus
+#ifndef CNULL
+#define CNULL nullptr
+#endif
+#else
 #ifndef CNULL
 #define CNULL ((CVOID*)0)
+#endif
 #endif
 
 #ifndef CIM_SQRT

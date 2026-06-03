@@ -1,6 +1,7 @@
 #ifndef CYNCOSA_CIMPORT_H
 #define CYNCOSA_CIMPORT_H
 
+
 /* This is the interface between CIM and cyncosa */
 /* Meaning that, we overwrite here (^>^) */
 
@@ -18,7 +19,6 @@
 #define CUINT8	uint8_t
 
 #endif
-
 /* ofc this is needed */
 #include "cim.h"
 

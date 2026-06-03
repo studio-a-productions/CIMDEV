@@ -1,6 +1,6 @@
 # This Project
 
-This project is technically two *libraries*, `CIM` and `cyncosa` (*though the former may also be referred to as **cim***). Cyncosa is built on top of CIM, and thus their development is currently intertwined (CIM gets updated out of the needs from cynCOSA).
+This project is technically two *libraries*, `CIM` and `cynCOSA` (*though the former may also be referred to as **cim***). cynCOSA is built on top of CIM, and thus their development is currently intertwined (CIM gets updated out of the needs from cynCOSA).
 
 This is a **development repository** and thus is not a *release*, nor is it a *publicly contributable* project. You may view its development in real-time, but do not expect the code or comments to be "perfect". 
 
