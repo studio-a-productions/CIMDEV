@@ -6,6 +6,11 @@
 #define CIMEXTR extern "C"
 #endif
 
+#define CIM_VERSION_MAJ 1U
+#define CIM_VERSION_MIN 0U
+#define CIM_VERSION_PATCH 0U
+
+
 #ifndef CCONSTEXPR
 #define CCONSTEXPR constexpr
 #endif
@@ -458,6 +463,14 @@ CIM_ADV_BUF_GEN(CIM_ADV_BUF_DOUBLE, CDOUBLE);
 
 #define csqrt		CIM_SQRT
 #define clsqrt		CIM_LSQRT
+#define cpw			CIM_POW
+#define clpw		CIM_LPOW
+#define csin     CIM_SIN
+#define clsin    CIM_LSIN
+#define ccos     CIM_COS
+#define clcos    CIM_LCOS
+#define ctan     CIM_TAN
+#define cltan    CIM_LTAN
 
 #define cmalloc		CIM_MALLOC
 #define ccalloc		CIM_CALLOC
@@ -465,9 +478,6 @@ CIM_ADV_BUF_GEN(CIM_ADV_BUF_DOUBLE, CDOUBLE);
 #define cmcpy		CIM_MCPY
 #define cmmv		CIM_MMOVE
 #define cmset		CIM_MSET
-
-#define cpw			CIM_POW
-#define clpw		CIM_LPOW
 
 #if defined(CIM_USE_ADV) || defined(CIM_USE_ADV_MATH)
 #define cvcgen2 CIM_ADV_MATH_VEC_GEN2
@@ -487,6 +497,14 @@ CIM_ADV_BUF_GEN(CIM_ADV_BUF_DOUBLE, CDOUBLE);
 
 #define cim_sqrt	CIM_SQRT
 #define cim_lsqrt	CIM_LSQRT
+#define cim_pow		CIM_POW
+#define cim_lpow	CIM_LPOW
+#define cim_sin     CIM_SIN
+#define cim_lsin    CIM_LSIN
+#define cim_cos     CIM_COS
+#define cim_lcos    CIM_LCOS
+#define cim_tan     CIM_TAN
+#define cim_ltan    CIM_LTAN
 
 #define cim_malloc	CIM_MALLOC
 #define cim_calloc	CIM_CALLOC
@@ -494,9 +512,8 @@ CIM_ADV_BUF_GEN(CIM_ADV_BUF_DOUBLE, CDOUBLE);
 #define cim_mcpy	CIM_MCPY
 #define cim_mmove	CIM_MMOVE
 #define cim_mset	CIM_MSET
+#define cim_mcmp    CIM_MCMP
 
-#define cim_pow		CIM_POW
-#define cim_lpow	CIM_LPOW
 
 #if defined(CIM_USE_ADV) || defined(CIM_USE_ADV_MATH)
 #define cvec_gen2 	CIM_ADV_MATH_VEC_GEN2
